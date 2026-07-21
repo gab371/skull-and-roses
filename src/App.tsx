@@ -5,13 +5,13 @@ import { Board } from "./components/game/Board";
 import { HandPanel } from "./components/game/HandPanel";
 import { AuctionPanel } from "./components/game/AuctionPanel";
 import { LogConsole } from "./components/game/LogConsole";
-import { Skull, Send } from "lucide-react";
+import { Skull, Send, FileText, X } from "lucide-react";
 
 export default function App() {
   const game = useGame();
   const [chatInput, setChatInput] = useState("");
-
   const [copied, setCopied] = useState(false);
+  const [showRules, setShowRules] = useState(false);
 
   const handleCopy = () => {
     if (hostPeerId) {
@@ -88,25 +88,36 @@ export default function App() {
             SKULL
           </span>
         </div>
-        {gameState && gameState.phase !== 'LOBBY' && (
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-zinc-400 font-mono bg-zinc-900 px-3 py-1.5 rounded-full border border-zinc-800">
-              Salon : <span className="text-rose-400 font-bold">{hostPeerId}</span>
-            </span>
-            <button
-              onClick={handleCopy}
-              className="text-xs px-2.5 py-1.5 bg-zinc-850 hover:bg-zinc-800 text-zinc-350 hover:text-zinc-200 rounded-xl transition-all border border-zinc-700 font-bold"
-            >
-              {copied ? "Copié !" : "Copier le code"}
-            </button>
-            <button
-              onClick={disconnect}
-              className="text-xs px-2.5 py-1.5 bg-rose-950/20 hover:bg-rose-900/20 text-rose-400 border border-rose-900/30 rounded-xl transition-all font-bold"
-            >
-              Quitter
-            </button>
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowRules(true)}
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-zinc-100 rounded-full border border-zinc-800 font-bold transition-all"
+            title="Règles du jeu"
+          >
+            <FileText className="w-3.5 h-3.5" />
+            <span>Règles</span>
+          </button>
+
+          {gameState && gameState.phase !== 'LOBBY' && (
+            <>
+              <span className="text-xs text-zinc-400 font-mono bg-zinc-900 px-3 py-1.5 rounded-full border border-zinc-800">
+                Salon : <span className="text-rose-400 font-bold">{hostPeerId}</span>
+              </span>
+              <button
+                onClick={handleCopy}
+                className="text-xs px-2.5 py-1.5 bg-zinc-850 hover:bg-zinc-800 text-zinc-350 hover:text-zinc-200 rounded-xl transition-all border border-zinc-700 font-bold"
+              >
+                {copied ? "Copié !" : "Copier le code"}
+              </button>
+              <button
+                onClick={disconnect}
+                className="text-xs px-2.5 py-1.5 bg-rose-950/20 hover:bg-rose-900/20 text-rose-400 border border-rose-900/30 rounded-xl transition-all font-bold"
+              >
+                Quitter
+              </button>
+            </>
+          )}
+        </div>
       </header>
 
       <main className="flex-1 w-full max-w-7xl mx-auto">
@@ -228,6 +239,78 @@ export default function App() {
           <span>Dépôt GitHub</span>
         </a>
       </footer>
+
+      {/* Rules Modal */}
+      {showRules && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/90 backdrop-blur-md transition-all">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 w-full max-w-2xl text-zinc-100 shadow-2xl relative max-h-[90vh] overflow-y-auto font-sans">
+            <button
+              onClick={() => setShowRules(false)}
+              className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-200 transition-colors"
+              title="Fermer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <h2 className="text-2xl font-black bg-gradient-to-r from-rose-500 to-amber-500 bg-clip-text text-transparent mb-4 flex items-center gap-2 border-b border-zinc-800 pb-2">
+              💀 Règles : Skull & Roses
+            </h2>
+
+            <div className="space-y-4 text-sm text-zinc-300 leading-relaxed">
+              <section>
+                <h3 className="font-bold text-rose-500 uppercase tracking-wide text-xs mb-1">Objectif</h3>
+                <p>
+                  Être le premier joueur à remporter deux défis (ou le dernier survivant). Un défi consiste à retourner un nombre annoncé de cartes sans jamais tomber sur un Crâne.
+                </p>
+              </section>
+
+              <section>
+                <h3 className="font-bold text-rose-500 uppercase tracking-wide text-xs mb-1">Le Matériel</h3>
+                <p>
+                  Chaque joueur possède 4 tapis/cartes : 3 Roses (sûres) et 1 Crâne (piège).
+                </p>
+              </section>
+
+              <section>
+                <h3 className="font-bold text-rose-500 uppercase tracking-wide text-xs mb-1">Déroulement du jeu</h3>
+                <p className="mb-2">Le joueur actif a deux options à son tour :</p>
+                <ul className="list-disc list-inside pl-2 space-y-1.5">
+                  <li>
+                    <strong className="text-zinc-100">Poser une carte :</strong> Placez une de vos cartes face cachée au-dessus de votre pile.
+                  </li>
+                  <li>
+                    <strong className="text-rose-400">Lancer une enchère :</strong> Annoncez combien de cartes vous pensez pouvoir retourner au total sur la table sans trouver de Crâne. Une fois l'enchère lancée, plus personne ne peut poser de carte.
+                  </li>
+                </ul>
+              </section>
+
+              <section>
+                <h3 className="font-bold text-rose-500 uppercase tracking-wide text-xs mb-1">L'Enchère</h3>
+                <p>
+                  À tour de rôle, chaque joueur doit soit <strong>surenchérir</strong> (annoncer un chiffre plus élevé), soit <strong>passer</strong>. L'enchère s'arrête lorsqu'il ne reste plus qu'un seul enchérisseur actif. Ce joueur doit alors résoudre son défi.
+                </p>
+              </section>
+
+              <section>
+                <h3 className="font-bold text-rose-500 uppercase tracking-wide text-xs mb-1">Résolution du Défi</h3>
+                <p className="mb-2">Le joueur ayant remporté l'enchère doit retourner le nombre de cartes annoncé dans l'ordre suivant :</p>
+                <ol className="list-decimal list-inside pl-2 space-y-1.5">
+                  <li>
+                    Il doit d'abord retourner <strong>l'intégralité de sa propre pile</strong> (cartes posées devant lui).
+                  </li>
+                  <li>
+                    Il choisit ensuite les cartes du haut des piles des autres joueurs de son choix, une par une.
+                  </li>
+                </ol>
+                <p className="mt-2">
+                  <span className="text-emerald-400 font-bold">Succès :</span> Si le compte est atteint sans Crâne, il gagne 1 point. (Il gagne la partie à 2 points).<br />
+                  <span className="text-rose-500 font-bold">Échec :</span> Dès qu'il révèle un Crâne, son défi s'arrête. Il perd définitivement l'une de ses 4 cartes au hasard.
+                </p>
+              </section>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
