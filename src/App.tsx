@@ -7,8 +7,14 @@ import { AuctionPanel } from "./components/game/AuctionPanel";
 import { LogConsole } from "./components/game/LogConsole";
 import { Skull, Send, FileText, X } from "lucide-react";
 
-export default function App() {
-  const game = useGame();
+interface AppProps {
+  isEmbedded?: boolean;
+  externalPeerManager?: any;
+  onExit?: () => void;
+}
+
+export default function App({ isEmbedded = false, externalPeerManager, onExit }: AppProps) {
+  const game = useGame({ externalPeerManager });
   const [chatInput, setChatInput] = useState("");
   const [copied, setCopied] = useState(false);
   const [showRules, setShowRules] = useState(false);
@@ -110,7 +116,7 @@ export default function App() {
                 {copied ? "Copié !" : "Copier le code"}
               </button>
               <button
-                onClick={disconnect}
+                onClick={isEmbedded && onExit ? onExit : disconnect}
                 className="text-xs px-2.5 py-1.5 bg-rose-950/20 hover:bg-rose-900/20 text-rose-400 border border-rose-900/30 rounded-xl transition-all font-bold"
               >
                 Quitter

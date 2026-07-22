@@ -5,8 +5,12 @@ import { sanitizeGameState } from "../network/protocol";
 import type { NetworkMessage } from "../network/protocol";
 import type { GameState } from "../core/types";
 
-export function useGame() {
-  const p2p = usePeer();
+interface UseGameOptions {
+  externalPeerManager?: any;
+}
+
+export function useGame(options?: UseGameOptions) {
+  const p2p = usePeer(options);
   const {
     isHost,
     myPeerId,
