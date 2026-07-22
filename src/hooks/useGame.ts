@@ -7,6 +7,9 @@ import type { GameState } from "../core/types";
 
 interface UseGameOptions {
   externalPeerManager?: any;
+  playerName?: string;
+  playerAvatar?: string;
+  isEmbedded?: boolean;
 }
 
 export function useGame(options?: UseGameOptions) {
@@ -27,8 +30,8 @@ export function useGame(options?: UseGameOptions) {
   } = p2p;
 
   const gameEngineRef = useRef<SkullGameEngine | null>(null);
-  const [localPlayerName, setLocalPlayerName] = useState<string>("");
-  const [localPlayerAvatar, setLocalPlayerAvatar] = useState<string>("💀");
+  const [localPlayerName, setLocalPlayerName] = useState<string>(options?.playerName || "");
+  const [localPlayerAvatar, setLocalPlayerAvatar] = useState<string>(options?.playerAvatar || "💀");
 
   // Helper function to broadcast sanitized states to each player
   const broadcastSanitizedStates = useCallback((engineState: GameState, overridePeerId?: string) => {
@@ -62,7 +65,7 @@ export function useGame(options?: UseGameOptions) {
     });
   }, [myPeerId, peerManager, p2p.peerManager]);
 
-  // Host Action Handler
+  // Host Action Handler & Embedded Auto-Start
   useEffect(() => {
     if (!isHost) {
       gameEngineRef.current = null;
@@ -74,6 +77,25 @@ export function useGame(options?: UseGameOptions) {
     }
 
     const engine = gameEngineRef.current;
+
+    // Auto start embedded game
+    if (options?.isEmbedded && options?.externalPeerManager && engine.state.phase === 'LOBBY') {
+      engine.state.players = [];
+      const hostName = options.playerName || "Hôte";
+      const hostAvatar = options.playerAvatar || "💀";
+      engine.addPlayer(myPeerId!, hostName, hostAvatar, true);
+
+      if (peerManager.lobbyPlayers) {
+        peerManager.lobbyPlayers.forEach((p: any) => {
+          if (p.peerId && p.peerId !== myPeerId) {
+            engine.addPlayer(p.peerId, p.username || `Joueur ${p.peerId.slice(0, 4)}`, p.avatar || "👤", false);
+          }
+        });
+      }
+
+      engine.startGame();
+      broadcastSanitizedStates(engine.state);
+    }
 
     peerManager.hostActionHandler = (_senderPeerId: string, actionMsg: NetworkMessage) => {
       if (actionMsg.type === 'ACTION') {

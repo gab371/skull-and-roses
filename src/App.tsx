@@ -10,11 +10,13 @@ import { Skull, Send, FileText, X } from "lucide-react";
 interface AppProps {
   isEmbedded?: boolean;
   externalPeerManager?: any;
+  playerName?: string;
+  playerAvatar?: string;
   onExit?: () => void;
 }
 
-export default function App({ isEmbedded = false, externalPeerManager, onExit }: AppProps) {
-  const game = useGame({ externalPeerManager });
+export default function App({ isEmbedded = false, externalPeerManager, playerName, playerAvatar, onExit }: AppProps) {
+  const game = useGame({ externalPeerManager, isEmbedded, playerName, playerAvatar });
   const [chatInput, setChatInput] = useState("");
   const [copied, setCopied] = useState(false);
   const [showRules, setShowRules] = useState(false);
