@@ -4,6 +4,7 @@ import { SkullGameEngine } from "../core/gameEngine";
 import { sanitizeGameState } from "../network/protocol";
 import type { NetworkMessage } from "../network/protocol";
 import type { GameState } from "../core/types";
+import { installTestHooks, registerEngineGetter } from "../testHooks";
 
 interface UseGameOptions {
   externalPeerManager?: any;
@@ -32,6 +33,14 @@ export function useGame(options?: UseGameOptions) {
 
   const gameEngineRef = useRef<SkullGameEngine | null>(null);
   const victoryPlayedRef = useRef<boolean>(false);
+
+  // Expose test hooks (dev/test builds only) for E2E determinism.
+  // No-op in production (installTestHooks gates on import.meta.env.PROD).
+  useEffect(() => {
+    registerEngineGetter(() => gameEngineRef.current);
+    installTestHooks();
+  }, []);
+
   const [localPlayerName, setLocalPlayerName] = useState<string>(options?.playerName || "");
   const [localPlayerAvatar, setLocalPlayerAvatar] = useState<string>(options?.playerAvatar || "💀");
 
