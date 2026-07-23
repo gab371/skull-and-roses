@@ -1,6 +1,6 @@
 import type { GameState, Card, Player } from "../core/types";
 
-export type MessageType = 'JOIN' | 'STATE_UPDATE' | 'ACTION' | 'CHAT';
+export type MessageType = 'JOIN' | 'STATE_UPDATE' | 'ACTION' | 'CHAT' | 'AUDIO_EVENT';
 
 export interface NetworkMessage {
   type: MessageType;

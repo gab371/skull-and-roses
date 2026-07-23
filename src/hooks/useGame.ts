@@ -18,6 +18,7 @@ export function useGame(options?: UseGameOptions) {
     isHost,
     myPeerId,
     peerManager,
+    playSfx,
     hostGame,
     joinGame,
     sendAction,
@@ -30,6 +31,7 @@ export function useGame(options?: UseGameOptions) {
   } = p2p;
 
   const gameEngineRef = useRef<SkullGameEngine | null>(null);
+  const victoryPlayedRef = useRef<boolean>(false);
   const [localPlayerName, setLocalPlayerName] = useState<string>(options?.playerName || "");
   const [localPlayerAvatar, setLocalPlayerAvatar] = useState<string>(options?.playerAvatar || "💀");
 
@@ -124,30 +126,52 @@ export function useGame(options?: UseGameOptions) {
 
           case 'PLACE_CARD':
             engine.placeCard(playerId, payload.cardUid);
+            playSfx('card');
             break;
 
           case 'START_BID':
             engine.startBid(playerId, payload.amount);
+            playSfx('bid');
             break;
 
           case 'RAISE_BID':
             engine.raiseBid(playerId, payload.amount);
+            playSfx('bid');
             break;
 
           case 'PASS':
             engine.passBid(playerId);
+            playSfx('click');
             break;
 
           case 'REVEAL_CARD':
             engine.revealCard(playerId, payload.targetPlayerId);
+            {
+              // The engine pushed the revealed card at the end of revealedCards.
+              const lastReveal = engine.state.revealedCards[engine.state.revealedCards.length - 1];
+              if (lastReveal && lastReveal.type === 'SKULL') {
+                playSfx('skullthud');
+              } else {
+                playSfx('card');
+              }
+            }
             break;
 
           case 'NEXT_ROUND':
             engine.startNextRound();
+            playSfx('click');
             break;
         }
 
         broadcastSanitizedStates(engine.state);
+
+        // Victory fanfare once when the game ends (broadcast to all peers).
+        if (engine.state.phase === 'GAME_OVER' && !victoryPlayedRef.current) {
+          victoryPlayedRef.current = true;
+          playSfx('victory');
+        } else if (engine.state.phase !== 'GAME_OVER') {
+          victoryPlayedRef.current = false;
+        }
       }
     };
 
@@ -162,7 +186,7 @@ export function useGame(options?: UseGameOptions) {
       peerManager.hostActionHandler = null;
       peerManager.onPeerStatusChange = null;
     };
-  }, [isHost, myPeerId, peerManager, broadcastSanitizedStates]);
+  }, [isHost, myPeerId, peerManager, playSfx, broadcastSanitizedStates]);
 
   // Client triggers
   const hostRoom = useCallback(async (name: string, avatar: string) => {
