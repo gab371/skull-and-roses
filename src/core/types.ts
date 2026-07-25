@@ -5,11 +5,14 @@ export interface Card {
   type: CardType;
 }
 
+export type PlayerRole = 'player' | 'spectator';
+
 export interface Player {
   id: string;
   name: string;
   avatar: string;
   isHost: boolean;
+  role: PlayerRole;
   isReady: boolean;
   score: number; // Wins a point on each successful bid (2 to win the game)
   hand: Card[]; // The cards currently held in hand
@@ -56,4 +59,6 @@ export interface GameState {
   revealedCards: { cardUid: string; playerId: string; type: CardType }[]; // Cards revealed in the current round
   logs: GameLog[];
   winnerId: string | null; // The game winner, if any
+  spectators: Player[];
+  spectatorLocks: { [peerId: string]: boolean };
 }

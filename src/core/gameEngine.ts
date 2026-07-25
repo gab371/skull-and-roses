@@ -1,4 +1,5 @@
 import type { GameState, Player, GameLog } from "./types";
+import { canChangeRole, spectatorConfigFromIds } from "p2play-core/spectator";
 
 export class SkullGameEngine {
   public state: GameState;
@@ -18,6 +19,8 @@ export class SkullGameEngine {
       revealedCards: [],
       logs: [],
       winnerId: null,
+      spectators: [],
+      spectatorLocks: {},
     };
   }
 
@@ -45,6 +48,7 @@ export class SkullGameEngine {
       name,
       avatar: avatar || '💀',
       isHost,
+      role: 'player',
       isReady: false,
       score: 0,
       hand: [],
@@ -57,6 +61,69 @@ export class SkullGameEngine {
     return true;
   }
 
+  public addSpectator(id: string, name: string, avatar?: string): boolean {
+    const existing = this.state.players.find(p => p.id === id) || this.state.spectators.find(s => s.id === id);
+    if (existing) return false;
+    this.state.spectators.push({
+      id, name, avatar: avatar || '💀', isHost: false, role: 'spectator', isReady: true,
+      score: 0, hand: [], pile: [], hasPassed: false, isEliminated: false,
+    });
+    this.addLog(`${name} rejoint en tant que spectateur 👁`, 'system');
+    return true;
+  }
+
+  public setPlayerRole(
+    id: string,
+    role: 'player' | 'spectator',
+    requester?: { requesterPeerId: string; requesterIsHost: boolean },
+  ): boolean {
+    if (this.state.phase !== 'LOBBY') return false;
+    const config = spectatorConfigFromIds(
+      this.state.spectators.map((s) => s.id),
+      this.state.spectatorLocks,
+    );
+    if (!canChangeRole(id, config, {
+      requesterPeerId: requester?.requesterPeerId ?? (this.state.players.find((p) => p.isHost)?.id || ''),
+      requesterIsHost: requester?.requesterIsHost ?? true,
+      nextRole: role,
+    })) return false;
+    if (role === 'spectator') {
+      const p = this.state.players.find(pl => pl.id === id);
+      if (!p || p.isHost) return false;
+      p.role = 'spectator';
+      p.isReady = true;
+      this.state.players = this.state.players.filter(pl => pl.id !== id);
+      this.state.spectators.push(p);
+      this.addLog(`${p.name} est maintenant spectateur 👁`, 'system');
+    } else {
+      const s = this.state.spectators.find(sp => sp.id === id);
+      if (!s) return false;
+      s.role = 'player';
+      s.isReady = false;
+      this.state.spectators = this.state.spectators.filter(sp => sp.id !== id);
+      this.state.players.push(s);
+      this.addLog(`${s.name} rejoint les joueurs !`, 'system');
+    }
+    return true;
+  }
+
+  public setSpectatorLock(peerId: string, locked: boolean): void {
+    if (locked) {
+      const asPlayer = this.state.players.find((p) => p.id === peerId);
+      if (asPlayer && !asPlayer.isHost) {
+        this.setPlayerRole(peerId, 'spectator', {
+          requesterPeerId: this.state.players.find((p) => p.isHost)?.id || peerId,
+          requesterIsHost: true,
+        });
+      }
+    }
+    this.state.spectatorLocks[peerId] = locked;
+  }
+
+  public isLocked(peerId: string): boolean {
+    return !!this.state.spectatorLocks[peerId];
+  }
+
   public removePlayer(id: string): void {
     const index = this.state.players.findIndex(p => p.id === id);
     if (index !== -1) {
@@ -67,6 +134,13 @@ export class SkullGameEngine {
         this.state.phase = 'LOBBY';
         this.addLog(`Pas assez de joueurs. Retour au lobby.`, 'warning');
       }
+      return;
+    }
+    const sindex = this.state.spectators.findIndex(s => s.id === id);
+    if (sindex !== -1) {
+      const s = this.state.spectators[sindex];
+      this.state.spectators.splice(sindex, 1);
+      this.addLog(`${s.name} (spectateur) a quitté la partie.`, 'warning');
     }
   }
 

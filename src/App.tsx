@@ -1,23 +1,29 @@
 import { useState } from "react";
+import type { PeerManagerLike } from "p2play-core";
 import { useGame } from "./hooks/useGame";
 import { Lobby } from "./components/game/Lobby";
 import { Board } from "./components/game/Board";
 import { HandPanel } from "./components/game/HandPanel";
 import { AuctionPanel } from "./components/game/AuctionPanel";
+import { SpectatorView } from "./components/game/SpectatorView";
 import { LogConsole } from "./components/game/LogConsole";
 import { Skull, Send, FileText, X } from "lucide-react";
 import { SoundToggle } from "./components/ui/SoundToggle";
 
 interface AppProps {
   isEmbedded?: boolean;
-  externalPeerManager?: any;
+  externalPeerManager?: PeerManagerLike;
   playerName?: string;
   playerAvatar?: string;
+  isHost?: boolean;
+  lateJoin?: boolean;
+  gameConfig?: any;
+  hubPhase?: string;
   onExit?: () => void;
 }
 
-export default function App({ isEmbedded = false, externalPeerManager, playerName, playerAvatar, onExit }: AppProps) {
-  const game = useGame({ externalPeerManager, isEmbedded, playerName, playerAvatar });
+export default function App({ isEmbedded = false, externalPeerManager, playerName, playerAvatar, isHost, lateJoin, gameConfig, hubPhase, onExit }: AppProps) {
+  const game = useGame({ externalPeerManager, isEmbedded, playerName, playerAvatar, isHost, lateJoin, gameConfig, hubPhase });
   const [chatInput, setChatInput] = useState("");
   const [copied, setCopied] = useState(false);
   const [showRules, setShowRules] = useState(false);
@@ -60,7 +66,7 @@ export default function App({ isEmbedded = false, externalPeerManager, playerNam
   const {
     myPeerId,
     hostPeerId,
-    isHost,
+    isHost: gameIsHost,
     chatMessages,
     gameState,
     status,
@@ -87,6 +93,7 @@ export default function App({ isEmbedded = false, externalPeerManager, playerNam
   };
 
   const showLobby = !gameState || gameState.phase === 'LOBBY';
+  const localIsSpectator = !!gameState?.spectators.some((s) => s.id === myPeerId);
 
   return (
     <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8 flex flex-col justify-between">
@@ -121,10 +128,11 @@ export default function App({ isEmbedded = false, externalPeerManager, playerNam
                 {copied ? "Copié !" : "Copier le code"}
               </button>
               <button
-                onClick={isEmbedded && onExit ? onExit : disconnect}
+                onClick={isEmbedded && onExit && gameIsHost ? onExit : disconnect}
                 className="text-xs px-2.5 py-1.5 bg-rose-950/20 hover:bg-rose-900/20 text-rose-400 border border-rose-900/30 rounded-xl transition-all font-bold"
+                title={isEmbedded ? (gameIsHost ? "Retour au Hub" : "Quitter le Hub (la partie continue)") : "Quitter"}
               >
-                Quitter
+                {isEmbedded ? (gameIsHost ? "← Hub" : "Quitter") : "Quitter"}
               </button>
             </>
           )}
@@ -137,15 +145,26 @@ export default function App({ isEmbedded = false, externalPeerManager, playerNam
             <Lobby
               myPeerId={myPeerId}
               hostPeerId={hostPeerId}
-              isHost={isHost}
+              isHost={gameIsHost}
               players={gameState?.players || []}
+              spectators={gameState?.spectators || []}
+              spectatorLocks={gameState?.spectatorLocks || {}}
               status={status}
               error={error}
               hostRoom={hostRoom}
               joinRoom={joinRoom}
               toggleReady={toggleReady}
               startGame={startGame}
-              disconnect={disconnect}
+              disconnect={isEmbedded && onExit ? onExit : disconnect}
+              onSetRole={game.setRole}
+              onLockSpectator={game.lockSpectator}
+            />
+          </div>
+        ) : localIsSpectator ? (
+          <div className="flex items-center justify-center min-h-[70vh]">
+            <SpectatorView
+              gameState={gameState}
+              onDisconnect={isEmbedded && onExit ? onExit : disconnect}
             />
           </div>
         ) : (
@@ -156,7 +175,7 @@ export default function App({ isEmbedded = false, externalPeerManager, playerNam
                 myPeerId={myPeerId}
                 onRevealCard={revealCard}
                 onNextRound={nextRound}
-                isHost={isHost}
+                isHost={gameIsHost}
               />
 
               {((gameState!.phase) === 'PLACING' || (gameState!.phase) === 'BIDDING') && (

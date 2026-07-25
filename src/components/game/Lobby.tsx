@@ -1,10 +1,14 @@
 import { useState } from "react";
+import type { Player } from "../../core/types";
+import { SpectatorRolePanel } from "./SpectatorRolePanel";
 
 interface LobbyProps {
   myPeerId: string | null;
   hostPeerId: string | null;
   isHost: boolean;
-  players: any[];
+  players: Player[];
+  spectators?: Player[];
+  spectatorLocks?: { [peerId: string]: boolean };
   status: string;
   error: string | null;
   hostRoom: (name: string, avatar: string) => Promise<void>;
@@ -12,6 +16,8 @@ interface LobbyProps {
   toggleReady: (ready: boolean) => void;
   startGame: () => void;
   disconnect: () => void;
+  onSetRole?: (peerId: string, role: 'player' | 'spectator') => void;
+  onLockSpectator?: (peerId: string, locked: boolean) => void;
 }
 
 const AVATARS = ["💀", "🌹", "😈", "🦊", "🐯", "🦉", "🦁", "🐉"];
@@ -21,6 +27,8 @@ export function Lobby({
   hostPeerId,
   isHost,
   players,
+  spectators = [],
+  spectatorLocks = {},
   status,
   error,
   hostRoom,
@@ -28,6 +36,8 @@ export function Lobby({
   toggleReady,
   startGame,
   disconnect,
+  onSetRole,
+  onLockSpectator,
 }: LobbyProps) {
   const [name, setName] = useState("");
   const [avatar, setAvatar] = useState("💀");
@@ -125,8 +135,18 @@ export function Lobby({
         </div>
         <p className="text-zinc-400 text-sm mb-6">Partagez ce code avec vos amis pour les inviter à jouer.</p>
 
+        <SpectatorRolePanel
+          players={players}
+          spectators={spectators}
+          spectatorLocks={spectatorLocks}
+          myPeerId={myPeerId}
+          isHost={isHost}
+          onSetRole={onSetRole || (() => {})}
+          onLockSpectator={onLockSpectator || (() => {})}
+        />
+
         <div className="space-y-4 mb-8">
-          <h2 className="text-lg font-bold text-zinc-200">Joueurs connectés ({players.length})</h2>
+          <h2 className="text-lg font-bold text-zinc-200">Joueurs connectés ({players.length}){spectators.length > 0 && <span className="text-sky-300/80 text-sm"> · 👁 {spectators.length} spectateur(s)</span>}</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {players.map((player) => (
               <div

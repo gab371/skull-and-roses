@@ -1,16 +1,20 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { usePeer } from "./usePeer";
 import { SkullGameEngine } from "../core/gameEngine";
-import { sanitizeGameState } from "../network/protocol";
+import { sanitizeGameState, sanitizeGameStateForSpectator } from "../network/protocol";
 import type { NetworkMessage } from "../network/protocol";
 import type { GameState } from "../core/types";
 import { installTestHooks, registerEngineGetter } from "../testHooks";
 
 interface UseGameOptions {
-  externalPeerManager?: any;
+  externalPeerManager?: import("p2play-core").PeerManagerLike;
   playerName?: string;
   playerAvatar?: string;
   isEmbedded?: boolean;
+  isHost?: boolean;
+  lateJoin?: boolean;
+  gameConfig?: any;
+  hubPhase?: string;
 }
 
 export function useGame(options?: UseGameOptions) {
@@ -49,30 +53,48 @@ export function useGame(options?: UseGameOptions) {
     const activePeerId = overridePeerId || myPeerId;
     if (!activePeerId) return;
 
-    // Send state to local host state
+    const sent = new Set<string>([activePeerId]);
+    const resolveConn = (id: string) => {
+      let conn = peerManager.connections.get(id);
+      if (!conn) {
+        for (const [peerId, connection] of peerManager.connections.entries()) {
+          if (peerId.endsWith(id) || id.endsWith(peerId)) {
+            conn = connection;
+            break;
+          }
+        }
+      }
+      return conn;
+    };
+
     const hostSanitized = sanitizeGameState(engineState, activePeerId);
     p2p.peerManager.onStateReceived?.(JSON.parse(JSON.stringify(hostSanitized)));
 
-    // Send customized sanitized state to each connected player
     engineState.players.forEach((p) => {
-      if (p.id !== activePeerId) {
-        // Find connection by player id
-        let conn = peerManager.connections.get(p.id);
-        // Fallback: search connections for matching peer id
-        if (!conn) {
-          for (const [peerId, connection] of peerManager.connections.entries()) {
-            // Check if connection peer name matches namespaced target
-            if (peerId.endsWith(p.id) || p.id.endsWith(peerId)) {
-              conn = connection;
-              break;
-            }
-          }
-        }
-        if (conn && conn.open) {
-          const clientSanitized = sanitizeGameState(engineState, p.id);
-          conn.send({ type: 'STATE_UPDATE', state: clientSanitized });
-        }
+      if (p.id === activePeerId) return;
+      const conn = resolveConn(p.id);
+      if (conn && conn.open) {
+        conn.send({ type: 'STATE_UPDATE', state: sanitizeGameState(engineState, p.id) });
+        sent.add(p.id);
       }
+    });
+
+    const spectatorView = sanitizeGameStateForSpectator(engineState);
+    engineState.spectators.forEach((s) => {
+      const conn = resolveConn(s.id);
+      if (conn && conn.open) {
+        conn.send({ type: 'STATE_UPDATE', state: JSON.parse(JSON.stringify(spectatorView)) });
+        sent.add(s.id);
+      }
+    });
+
+    peerManager.connections.forEach((conn, peerId) => {
+      if (!conn.open || sent.has(peerId)) return;
+      const alreadyKnown =
+        engineState.players.some((p) => p.id === peerId || peerId.endsWith(p.id) || p.id.endsWith(peerId)) ||
+        engineState.spectators.some((s) => s.id === peerId || peerId.endsWith(s.id) || s.id.endsWith(peerId));
+      if (alreadyKnown) return;
+      conn.send({ type: 'STATE_UPDATE', state: JSON.parse(JSON.stringify(spectatorView)) });
     });
   }, [myPeerId, peerManager, p2p.peerManager]);
 
@@ -89,7 +111,8 @@ export function useGame(options?: UseGameOptions) {
 
     const engine = gameEngineRef.current;
 
-    // Auto start embedded game - deferred one tick to let usePeer register onStateReceived
+    // Embedded setup: populate players from the Hub lobby but STAY in LOBBY
+    // so the host can pick roles (Joueur / Spectateur) before clicking "Lancer la Partie".
     if (options?.isEmbedded && options?.externalPeerManager && engine.state.phase === 'LOBBY') {
       setTimeout(() => {
         engine.state.players = [];
@@ -105,18 +128,24 @@ export function useGame(options?: UseGameOptions) {
           });
         }
 
-        engine.startGame();
+        // Do NOT auto-start: broadcast the LOBBY state so the role-selection
+        // lobby + "Lancer la Partie" shows for everyone.
         broadcastSanitizedStates(engine.state);
       }, 0);
     }
 
-    peerManager.hostActionHandler = (_senderPeerId: string, actionMsg: NetworkMessage) => {
-      if (actionMsg.type === 'ACTION') {
-        const { actionName, playerId, payload } = actionMsg;
+    peerManager.hostActionHandler = (_senderPeerId, actionMsg) => {
+      const msg = actionMsg as NetworkMessage;
+      if (msg.type === 'ACTION') {
+        const { actionName, playerId, payload } = msg;
 
         switch (actionName) {
           case 'JOIN_GAME':
-            engine.addPlayer(playerId, payload.name, payload.avatar, playerId === myPeerId);
+            if (engine.state.phase === 'LOBBY') {
+              engine.addPlayer(playerId, payload.name, payload.avatar, playerId === myPeerId);
+            } else {
+              engine.addSpectator(playerId, payload.name, payload.avatar);
+            }
             break;
 
           case 'TOGGLE_READY':
@@ -130,6 +159,33 @@ export function useGame(options?: UseGameOptions) {
           case 'START_GAME':
             if (playerId === myPeerId) {
               engine.startGame();
+            }
+            break;
+
+          case 'SET_ROLE': {
+            const requesterIsHost = playerId === myPeerId;
+            const targetId = payload.peerId as string;
+            const nextRole = payload.role as 'player' | 'spectator';
+            if (requesterIsHost || targetId === playerId) {
+              engine.setPlayerRole(targetId, nextRole, {
+                requesterPeerId: playerId,
+                requesterIsHost,
+              });
+            }
+            break;
+          }
+
+          case 'LOCK_SPECTATOR':
+            if (playerId === myPeerId) {
+              const targetId = payload.peerId as string;
+              const locked = !!payload.locked;
+              if (locked) {
+                engine.setPlayerRole(targetId, 'spectator', {
+                  requesterPeerId: playerId,
+                  requesterIsHost: true,
+                });
+              }
+              engine.setSpectatorLock(targetId, locked);
             }
             break;
 
@@ -188,6 +244,8 @@ export function useGame(options?: UseGameOptions) {
       if (peerStatus === 'DISCONNECTED') {
         engine.removePlayer(peerId);
         broadcastSanitizedStates(engine.state);
+      } else if (peerStatus === 'CONNECTED') {
+        broadcastSanitizedStates(engine.state);
       }
     };
 
@@ -196,6 +254,37 @@ export function useGame(options?: UseGameOptions) {
       peerManager.onPeerStatusChange = null;
     };
   }, [isHost, myPeerId, peerManager, playSfx, broadcastSanitizedStates]);
+
+  // Embedded guests must announce themselves to the host engine.
+  useEffect(() => {
+    if (!options?.isEmbedded || isHost || !myPeerId) return;
+    const name = options.playerName || localPlayerName || "Joueur";
+    const avatar = options.playerAvatar || localPlayerAvatar || "👤";
+    const sendJoin = () => {
+      peerManager.sendToHost("ACTION", {
+        actionName: "JOIN_GAME",
+        playerId: myPeerId,
+        payload: { name, avatar },
+      });
+    };
+    const t1 = window.setTimeout(sendJoin, 250);
+    const t2 = window.setTimeout(sendJoin, 1000);
+    const t3 = window.setTimeout(sendJoin, 2500);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+      window.clearTimeout(t3);
+    };
+  }, [
+    options?.isEmbedded,
+    options?.playerName,
+    options?.playerAvatar,
+    isHost,
+    myPeerId,
+    localPlayerName,
+    localPlayerAvatar,
+    peerManager,
+  ]);
 
   // Client triggers
   const hostRoom = useCallback(async (name: string, avatar: string) => {
@@ -227,6 +316,14 @@ export function useGame(options?: UseGameOptions) {
 
   const startGame = useCallback(() => {
     sendAction('START_GAME', {});
+  }, [sendAction]);
+
+  const setRole = useCallback((peerId: string, role: 'player' | 'spectator') => {
+    sendAction('SET_ROLE', { peerId, role });
+  }, [sendAction]);
+
+  const lockSpectator = useCallback((peerId: string, locked: boolean) => {
+    sendAction('LOCK_SPECTATOR', { peerId, locked });
   }, [sendAction]);
 
   const placeCard = useCallback((cardUid: string) => {
@@ -270,6 +367,8 @@ export function useGame(options?: UseGameOptions) {
     joinRoom,
     toggleReady,
     startGame,
+    setRole,
+    lockSpectator,
     placeCard,
     startBid,
     raiseBid,

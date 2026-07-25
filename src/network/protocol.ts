@@ -78,3 +78,30 @@ export function sanitizeGameState(state: GameState, targetPlayerId: string): Gam
     players: sanitizedPlayers,
   };
 }
+
+/**
+ * Sanitizes the game state for a spectator.
+ * Spectators never see any face-down hand or pile card types (only revealed pile cards).
+ */
+export function sanitizeGameStateForSpectator(state: GameState): GameState {
+  const sanitizedPlayers = state.players.map((player): Player => ({
+    ...player,
+    hand: player.hand.map((_, index) => ({
+      uid: `hidden_hand_${player.id}_${index}`,
+      type: 'ROSE',
+    } as Card)),
+    pile: player.pile.map((card, index) => {
+      const isRevealed = state.revealedCards.some(rc => rc.cardUid === card.uid);
+      if (isRevealed) return { ...card };
+      return {
+        uid: `hidden_pile_${player.id}_${index}`,
+        type: 'ROSE',
+      } as Card;
+    }),
+  }));
+
+  return {
+    ...state,
+    players: sanitizedPlayers,
+  };
+}
