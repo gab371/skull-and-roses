@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { PeerManagerLike } from "p2play-core";
+import { TextChatPanel } from "p2play-core/chat";
 import { copyRoomUrlToClipboard } from "p2play-core/url";
 import { useGame } from "./hooks/useGame";
 import { Lobby } from "./components/game/Lobby";
@@ -8,7 +9,7 @@ import { HandPanel } from "./components/game/HandPanel";
 import { AuctionPanel } from "./components/game/AuctionPanel";
 import { SpectatorView } from "./components/game/SpectatorView";
 import { LogConsole } from "./components/game/LogConsole";
-import { Skull, Send, FileText, X } from "lucide-react";
+import { Skull, FileText, X } from "lucide-react";
 import { SoundToggle } from "./components/ui/SoundToggle";
 
 interface AppProps {
@@ -25,7 +26,6 @@ interface AppProps {
 
 export default function App({ isEmbedded = false, externalPeerManager, playerName, playerAvatar, isHost, lateJoin, gameConfig, hubPhase, onExit }: AppProps) {
   const game = useGame({ externalPeerManager, isEmbedded, playerName, playerAvatar, isHost, lateJoin, gameConfig, hubPhase });
-  const [chatInput, setChatInput] = useState("");
   const [copied, setCopied] = useState(false);
   const [showRules, setShowRules] = useState(false);
 
@@ -61,13 +61,6 @@ export default function App({ isEmbedded = false, externalPeerManager, playerNam
     sendChatMessage,
     disconnect,
   } = game;
-
-  const handleSendChat = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!chatInput.trim()) return;
-    sendChatMessage(chatInput.trim());
-    setChatInput("");
-  };
 
   const showLobby = !gameState || gameState.phase === 'LOBBY';
   const localIsSpectator = !!gameState?.spectators.some((s) => s.id === myPeerId);
@@ -187,36 +180,14 @@ export default function App({ isEmbedded = false, externalPeerManager, playerNam
                 <LogConsole logs={gameState.logs} />
               </div>
 
-              <div className="bg-zinc-900/60 backdrop-blur-md border border-zinc-800 rounded-3xl p-5 shadow-xl flex flex-col h-[280px]">
-                <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-3">Tchat</h3>
-                <div className="flex-1 overflow-y-auto space-y-2 mb-3 pr-1.5 scrollbar-thin">
-                  {chatMessages.map((msg, index) => (
-                    <div key={index} className="text-xs leading-relaxed">
-                      <span className="font-bold text-zinc-300">{msg.sender} : </span>
-                      <span className="text-zinc-400">{msg.text}</span>
-                    </div>
-                  ))}
-                  {chatMessages.length === 0 && (
-                    <div className="text-zinc-600 text-center py-8">Aucun message.</div>
-                  )}
-                </div>
-                <form onSubmit={handleSendChat} className="flex gap-2">
-                  <input
-                    type="text"
-                    placeholder="Tapez un message..."
-                    value={chatInput}
-                    onChange={(e) => setChatInput(e.target.value)}
-                    className="flex-1 px-3 py-2 rounded-xl bg-zinc-950 border border-zinc-850 focus:border-rose-500 text-xs text-zinc-200 outline-none transition-all"
-                  />
-                  <button
-                    type="submit"
-                    className="w-8 h-8 flex items-center justify-center bg-rose-600 hover:bg-rose-500 text-white rounded-xl transition-all shadow-md shadow-rose-950/20"
-                    title="Envoyer"
-                  >
-                    <Send className="w-3.5 h-3.5" />
-                  </button>
-                </form>
-              </div>
+              <TextChatPanel
+                messages={chatMessages}
+                onSend={sendChatMessage}
+                title="Tchat"
+                placeholder="Tapez un message..."
+                emptyLabel="Aucun message."
+                className="bg-zinc-900/60 backdrop-blur-md border border-zinc-800 rounded-3xl p-5 shadow-xl flex flex-col h-[280px] text-zinc-100 text-xs"
+              />
             </div>
           </div>
         )}
