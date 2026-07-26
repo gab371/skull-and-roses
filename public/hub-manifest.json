@@ -1,0 +1,9 @@
+{
+  "key": "skull",
+  "name": "Skull & Roses",
+  "emoji": "💀",
+  "desc": "Mises, Bluff & Roses.",
+  "hasPreConfig": true,
+  "avatars": ["💀", "🌹", "🦊", "🐯", "🦉", "🐍"],
+  "shellBackground": "radial-gradient(circle at center, #1b0a0f 0%, #09090b 100%)"
+}
