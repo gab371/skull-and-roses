@@ -19,6 +19,7 @@ export interface Player {
   pile: Card[]; // The stack of cards currently placed face-down on their board
   hasPassed: boolean; // Flag to track if the player has passed during the bidding phase
   isEliminated: boolean; // True if the player has lost all 4 cards
+  disconnected?: boolean;
 }
 
 export type GamePhase =

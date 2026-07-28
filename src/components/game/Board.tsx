@@ -132,6 +132,9 @@ export function Board({
                           Moi
                         </span>
                       )}
+                      {player.disconnected && (
+                        <span className="text-[10px] text-red-400 font-normal">⚠ Déconnecté</span>
+                      )}
                     </span>
                     <span className="text-[10px] text-zinc-500 font-mono block mt-0.5">
                       Cartes restantes : {player.hand.length + player.pile.length}

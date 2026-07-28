@@ -1,5 +1,6 @@
 import type { GameState, Player, GameLog } from "./types";
 import { canChangeRole, spectatorConfigFromIds } from "p2play-core/spectator";
+import { remapRecordKey } from "p2play-core/presence";
 
 export class SkullGameEngine {
   public state: GameState;
@@ -122,6 +123,41 @@ export class SkullGameEngine {
 
   public isLocked(peerId: string): boolean {
     return !!this.state.spectatorLocks[peerId];
+  }
+
+  public markDisconnected(id: string): void {
+    const p = this.state.players.find(p => p.id === id);
+    if (p) {
+      p.disconnected = true;
+      this.addLog(`${p.name} s'est déconnecté (reconnexion possible).`, 'warning');
+    }
+  }
+
+  public isDisconnected(id: string): boolean {
+    return !!this.state.players.find(p => p.id === id)?.disconnected;
+  }
+
+  public remapPlayerId(
+    oldId: string,
+    newId: string,
+    profile?: { username?: string; avatar?: string },
+  ): boolean {
+    const p = this.state.players.find(p => p.id === oldId);
+    if (!p) return false;
+    p.id = newId;
+    p.disconnected = false;
+    if (profile?.username) p.name = profile.username;
+    if (profile?.avatar) p.avatar = profile.avatar;
+    if (this.state.winnerId === oldId) this.state.winnerId = newId;
+    if (this.state.bidWinnerId === oldId) this.state.bidWinnerId = newId;
+    this.state.revealedCards = this.state.revealedCards.map((c) =>
+      c.playerId === oldId ? { ...c, playerId: newId } : c,
+    );
+    remapRecordKey(this.state.spectatorLocks, oldId, newId);
+    const specIdx = this.state.spectators.findIndex(s => s.id === oldId);
+    if (specIdx !== -1) this.state.spectators[specIdx].id = newId;
+    this.addLog(`${p.name} s'est reconnecté.`, 'system');
+    return true;
   }
 
   public removePlayer(id: string): void {
