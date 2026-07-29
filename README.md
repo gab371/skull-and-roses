@@ -18,11 +18,12 @@ Jouez directement sur votre navigateur sans aucune installation :
 
 ## ✨ Fonctionnalités Clés
 
-- **Connexion P2P Standalone** : Connexions directes de navigateur à navigateur grâce à **PeerJS**. Pas de base de données ni de serveur de jeu intermédiaire (seul un serveur de signalement public est utilisé pour connecter les pairs).
+- **Connexion P2P via [`p2play-core`](https://github.com/gab371/p2play-core)** (≥ v0.6.0) : PeerJS, lobby partagé, chat, présence, partage de lien de salon.
 - **Design Gothique Sombre** : Interface immersive aux couleurs contrastées de rose et ambre, typographie *Creepster* et effets visuels léchés.
 - **Gestion Complète des Enchères** : Interface de mise simple et intuitive avec calcul des totaux de cartes posées.
 - **Résolution Assistée** : Le jeu valide automatiquement l'ordre de révélation (vos propres cartes d'abord) et gère l'élimination des cartes perdues en cas de Crâne révélé.
-- **Tchat en Direct** : Discussion P2P sécurisée intégrée pour bluffer, négocier et intimider vos adversaires.
+- **Tchat en Direct** : Discussion P2P via `p2play-core/chat` pour bluffer et négocier.
+- **Hub P2Play** : Build lib montable dans [hub-p2play](https://github.com/gab371/hub-p2play).
 
 ---
 
@@ -62,9 +63,14 @@ Jouez directement sur votre navigateur sans aucune installation :
 
 Le projet suit des principes stricts de séparation des responsabilités pour garantir la testabilité et la maintenabilité :
 - **`/src/core`** : Moteur de jeu pur (gestion des tours, calcul des points, défausse aléatoire) écrit en TypeScript pur, sans aucune dépendance UI ou réseau.
-- **`/src/network`** : Gestionnaire de connexion P2P PeerJS et protocole de messages réseau.
+- **Réseau** : [`p2play-core`](https://github.com/gab371/p2play-core) (`usePeer`, `P2PlayLobby`, présence, chat) — pas de `PeerManager` local.
 - **`/src/hooks`** : Custom hooks liant l'état de jeu réactif et les événements réseau au cycle de vie de React.
-- **`/src/components`** : Composants d'interface (plateau de jeu, lobby, modaux de décision).
+- **`/src/components`** : Composants d'interface (plateau de jeu, lobby connecté, modaux de décision).
+
+Dépendance typique :
+```json
+"p2play-core": "github:gab371/p2play-core#v0.6.0"
+```
 
 ---
 
