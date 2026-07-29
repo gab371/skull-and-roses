@@ -5,18 +5,15 @@ interface BoardProps {
   gameState: GameState;
   myPeerId: string | null;
   onRevealCard: (targetPlayerId: string) => void;
-  onNextRound: () => void;
-  isHost: boolean;
+  boardExpanded?: boolean;
 }
 
 export function Board({
   gameState,
   myPeerId,
   onRevealCard,
-  onNextRound,
-  isHost,
+  boardExpanded = false,
 }: BoardProps) {
-  const activePlayer = gameState.players[gameState.activePlayerIndex];
   const myPlayer = gameState.players.find((p) => p.id === myPeerId);
 
   const canRevealThisPlayer = (targetPlayerId: string) => {
@@ -56,50 +53,13 @@ export function Board({
   };
 
   return (
-    <div className="space-y-6">
-      {/* Round / Phase Info Bar */}
-      <div className="bg-zinc-900/60 backdrop-blur-md border border-zinc-800 rounded-3xl p-5 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div>
-          <span className="text-[10px] font-bold uppercase tracking-widest text-rose-500">
-            Phase : {gameState.phase}
-          </span>
-          <h2 className="text-xl font-extrabold text-zinc-100 mt-1">
-            {gameState.phase === 'PLACING' && `Tour de ${activePlayer.name} (Pose ou Enchère)`}
-            {gameState.phase === 'BIDDING' && `Enchères en cours... Tour de ${activePlayer.name}`}
-            {gameState.phase === 'REVEALING' && (
-              <>
-                Défie lancé par{" "}
-                <span className="text-amber-400 font-black">
-                  {gameState.players.find((p) => p.id === gameState.bidWinnerId)?.name}
-                </span>{" "}
-                ({gameState.revealedCards.length} / {gameState.cardsToReveal} révélées)
-              </>
-            )}
-            {gameState.phase === 'ROUND_END' && "Fin de la manche"}
-            {gameState.phase === 'GAME_OVER' && "Partie Terminée !"}
-          </h2>
-        </div>
-
-        {gameState.phase === 'ROUND_END' && (
-          <div>
-            {isHost ? (
-              <button
-                onClick={onNextRound}
-                className="py-3 px-6 rounded-2xl bg-gradient-to-r from-rose-500 to-amber-500 hover:from-rose-400 hover:to-amber-400 text-zinc-950 font-bold transition-all shadow-lg shadow-rose-500/20"
-              >
-                Lancer la manche suivante
-              </button>
-            ) : (
-              <span className="text-sm text-zinc-400 animate-pulse italic">
-                En attente du lancement par l'Hôte...
-              </span>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Players Mats Layout Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div
+      className={
+        boardExpanded
+          ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+          : "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+      }
+    >
         {gameState.players.map((player, idx) => {
           const isCurrentActive = gameState.activePlayerIndex === idx && gameState.phase !== 'ROUND_END';
           const isWinner = gameState.bidWinnerId === player.id && gameState.phase === 'REVEALING';
@@ -238,7 +198,6 @@ export function Board({
             </div>
           );
         })}
-      </div>
     </div>
   );
 }
