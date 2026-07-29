@@ -1,4 +1,5 @@
 import type { GameState, Card } from "../../core/types";
+import { Badge } from "p2play-core/ui";
 
 interface BoardProps {
   gameState: GameState;
@@ -133,7 +134,7 @@ export function Board({
                         </span>
                       )}
                       {player.disconnected && (
-                        <span className="text-[10px] text-red-400 font-normal">⚠ Déconnecté</span>
+                        <Badge variant="destructive">Déconnecté</Badge>
                       )}
                     </span>
                     <span className="text-[10px] text-zinc-500 font-mono block mt-0.5">
@@ -162,22 +163,22 @@ export function Board({
               {/* Status Badges */}
               <div className="my-3 flex flex-wrap gap-1.5 z-10">
                 {player.isEliminated && (
-                  <span className="text-[10px] font-bold px-2 py-0.5 bg-rose-950/30 text-rose-500 border border-rose-900/40 rounded-full">
+                  <span className="whitespace-nowrap text-[10px] font-bold px-2.5 py-0.5 bg-rose-950/30 text-rose-500 border border-rose-900/40 rounded-full">
                     Éliminé
                   </span>
                 )}
                 {player.hasPassed && gameState.phase === 'BIDDING' && (
-                  <span className="text-[10px] font-bold px-2 py-0.5 bg-zinc-950 text-zinc-500 border border-zinc-850 rounded-full">
+                  <span className="whitespace-nowrap text-[10px] font-bold px-2.5 py-0.5 bg-zinc-950 text-zinc-500 border border-zinc-850 rounded-full">
                     Passé
                   </span>
                 )}
                 {isCurrentActive && (
-                  <span className="text-[10px] font-bold px-2 py-0.5 bg-rose-500/10 text-rose-400 border border-rose-500/20 rounded-full animate-pulse">
-                    Joue...
+                  <span className="whitespace-nowrap text-[10px] font-bold px-2.5 py-0.5 bg-rose-500/10 text-rose-400 border border-rose-500/20 rounded-full animate-pulse">
+                    À son tour
                   </span>
                 )}
                 {isWinner && (
-                  <span className="text-[10px] font-bold px-2 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-full animate-bounce">
+                  <span className="whitespace-nowrap text-[10px] font-bold px-2.5 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-full animate-bounce">
                     Challenger ({gameState.highestBid})
                   </span>
                 )}
