@@ -1,5 +1,6 @@
-import type { GameState, Card } from "../../core/types";
+import type { GameState } from "../../core/types";
 import { Badge } from "p2play-core/ui";
+import { SkullCardFace } from "./SkullCardFace";
 
 interface BoardProps {
   gameState: GameState;
@@ -30,26 +31,6 @@ export function Board({
     }
 
     return true;
-  };
-
-  const getPlayerCardStyles = (card: Card, isOwner: boolean) => {
-    const isRevealed = gameState.revealedCards.some((rc) => rc.cardUid === card.uid);
-
-    if (isRevealed) {
-      return card.type === 'SKULL'
-        ? "bg-gradient-to-br from-red-600 to-rose-900 border-red-500 text-white shadow-lg shadow-red-950/40"
-        : "bg-gradient-to-br from-amber-600 to-yellow-800 border-amber-500 text-white shadow-lg shadow-amber-950/40";
-    }
-
-    if (isOwner) {
-      // Owner sees what cards they placed in their own pile
-      return card.type === 'SKULL'
-        ? "bg-zinc-800/80 border-rose-500/40 text-rose-500/80"
-        : "bg-zinc-800/80 border-amber-500/40 text-amber-500/80";
-    }
-
-    // Default face down card look for opponents
-    return "bg-gradient-to-br from-zinc-800 to-zinc-950 border-zinc-700 text-zinc-650";
   };
 
   return (
@@ -150,8 +131,13 @@ export function Board({
                   const isRevealed = gameState.revealedCards.some(
                     (rc) => rc.cardUid === card.uid
                   );
-                  // Calculate overlaps
                   const offset = cIdx * 12;
+                  const isOwner = player.id === myPeerId;
+                  const mode = isRevealed
+                    ? "pile-revealed"
+                    : isOwner
+                      ? "pile-owner"
+                      : "pile-hidden";
 
                   return (
                     <div
@@ -160,23 +146,14 @@ export function Board({
                         transform: `translateX(${offset}px) scale(${1 - (player.pile.length - cIdx - 1) * 0.05})`,
                         zIndex: cIdx,
                       }}
-                      className={`w-14 h-20 rounded-xl border-2 flex flex-col items-center justify-center font-bold text-lg transition-all absolute shadow-md ${getPlayerCardStyles(
-                        card,
-                        player.id === myPeerId
-                      )}`}
+                      className="absolute transition-all"
                     >
-                      {isRevealed ? (
-                        <span>{card.type === 'SKULL' ? "💀" : "🌹"}</span>
-                      ) : player.id === myPeerId ? (
-                        <div className="flex flex-col items-center leading-none">
-                          <span className="text-xs">{card.type === 'SKULL' ? "💀" : "🌹"}</span>
-                          <span className="text-[7px] text-zinc-500 mt-1 uppercase tracking-tighter">
-                            {cIdx + 1}
-                          </span>
-                        </div>
-                      ) : (
-                        <span className="text-zinc-600 text-xs">?</span>
-                      )}
+                      <SkullCardFace
+                        card={card}
+                        mode={mode}
+                        faceDown={!isRevealed && !isOwner}
+                        compact
+                      />
                     </div>
                   );
                 })}

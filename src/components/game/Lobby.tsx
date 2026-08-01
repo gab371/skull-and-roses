@@ -56,7 +56,7 @@ export function Lobby({
       <div className="w-full max-w-2xl mx-auto p-6 bg-zinc-900/60 backdrop-blur-xl border border-zinc-800 rounded-3xl shadow-2xl relative overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
           <div className="flex items-center gap-2">
-            <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-rose-500 to-amber-500 bg-clip-text text-transparent">
+            <h1 className="text-3xl font-serif font-normal tracking-wide bg-gradient-to-r from-rose-500 to-amber-500 bg-clip-text text-transparent">
               Salon de Jeu : {hostPeerId}
             </h1>
             {hostPeerId && (

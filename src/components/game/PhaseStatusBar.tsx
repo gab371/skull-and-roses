@@ -25,7 +25,7 @@ export function PhaseStatusBar({
         <span className="text-[10px] font-bold uppercase tracking-widest text-rose-500">
           Phase : {gameState.phase}
         </span>
-        <h2 className="text-xl font-extrabold text-zinc-100 mt-1">
+        <h2 className="text-xl font-serif font-normal text-zinc-100 mt-1 tracking-wide">
           {gameState.phase === "PLACING" && `Tour de ${activePlayer.name} (Pose ou Enchère)`}
           {gameState.phase === "BIDDING" && `Enchères en cours... Tour de ${activePlayer.name}`}
           {gameState.phase === "REVEALING" && (

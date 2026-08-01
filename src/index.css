@@ -38,9 +38,9 @@
     border-color: hsl(var(--border));
   }
   body {
-    background: radial-gradient(circle at center, #1b0a0f 0%, #09090b 100%);
+    background: radial-gradient(circle at center, #12080c 0%, #09090b 100%);
     color: hsl(var(--foreground));
-    font-family: 'Geist Variable', sans-serif;
+    font-family: "Outfit", "Geist Variable", sans-serif;
   }
 }
 

@@ -72,7 +72,7 @@ export default function App({ isEmbedded = false, externalPeerManager, playerNam
       <header className="max-w-7xl mx-auto w-full flex items-center justify-between mb-8 pb-4 border-b border-zinc-900">
         <div className="flex items-center gap-2">
           <Skull className="w-6 h-6 text-rose-500 animate-pulse" />
-          <span className="text-xl font-black bg-gradient-to-r from-rose-500 to-amber-500 bg-clip-text text-transparent tracking-tight">
+          <span className="text-xl font-serif font-normal bg-gradient-to-r from-rose-500 to-amber-500 bg-clip-text text-transparent tracking-tight">
             SKULL
           </span>
         </div>
